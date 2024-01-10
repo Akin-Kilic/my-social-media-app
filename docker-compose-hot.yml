@@ -1,0 +1,102 @@
+version: "3"
+services:
+  netadim-db:
+    image: "postgres:14.5"
+    container_name: netadim-db
+    volumes:
+      - netadim_data:/var/lib/postgresql/data
+    networks:
+      - netadim
+    ports:
+      - "5435:5432"
+    environment:
+      - POSTGRES_USER=netadim
+      - POSTGRES_PASSWORD=netadim
+      - POSTGRES_DB=netadim
+
+  # netadim-nats:
+  #   image: nats:latest
+  #   command: --js
+  #   ports:
+  #     - "4222:4222"
+  #     - "8222:8222"
+  #     - "6222:6222"
+  #   tty: true
+  #   container_name: netadim-nats
+  #   networks:
+  #     - netadim
+
+  netadim-redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - '6381:6379'
+    volumes:
+      - redis_data:/data
+    environment:
+    - ALLOW_EMPTY_PASSWORD=yes 
+    networks:
+      - netadim
+
+  minio:
+    image: quay.io/minio/minio
+    container_name: minio
+    environment:
+      MINIO_ROOT_USER: netadim
+      MINIO_ROOT_PASSWORD: netadimdevsecret
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    restart: always
+    volumes:
+      - minio_data:/data
+    networks:
+      - netadim
+
+  meili:
+    image: getmeili/meilisearch:latest
+    volumes:
+      - ./data.ms:/data.ms
+    ports:
+      - "7700:7700"
+    environment:
+      - MEILI_MASTER_KEY=r6EZqIi6HbNxGeOGm0kztMJlUG9TnRaG
+    networks:
+      - netadim  
+ 
+
+  netadim:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.dev
+    image: netadim
+    container_name: netadim
+    restart: always
+    environment:
+      - MIGRATE=true
+      - SEED=true
+    volumes:
+      - .:/app
+      - ./config.docker.yaml:/app/config.yaml
+    networks:
+      - netadim
+    ports:
+      - 3003:3003
+      - 50051:50051
+    depends_on:
+      - netadim-db
+      - minio
+
+
+networks:
+  netadim:
+    name: netadim
+    driver: bridge
+
+volumes:
+  netadim_data:
+    external: false
+  minio_data:
+    external: false
+  redis_data:  

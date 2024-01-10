@@ -1,0 +1,21 @@
+port: 3003
+jwt_secret: "secret"
+jwt_expire_time: 5
+database:
+    host: netadim-db
+    port: 5432
+    name: netadim
+    user: netadim
+    password: netadim
+    sslmode: disable
+    migrate: true
+
+redis:
+    host: netadim-redis
+    port: 6379
+    password:
+    db: 0 
+
+# nats:
+#   host: netadim-nats
+#   port: 4222
