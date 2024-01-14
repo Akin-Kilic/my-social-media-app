@@ -1,22 +1,30 @@
 package middlewares
 
 import (
-	"social-media-app/pkg/config"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/golang-jwt/jwt/v5"
 )
 
-var secret = config.ReadValue().JwtSecret
-
-func JwtControl() fiber.Handler {
+func SetToken() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		user := c.Locals("user").(*jwt.Token)
-		jwtToken, err := jwt.ParseWithClaims(token, &customClaims, func(token *jwt.Token) (interface{}, error) {
-			return secretKey, nil
-		})
+		authHeader := c.Get("Authorization")
 
-		// Devam et
+		// Check if the header is missing or doesn't have the correct format
+		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error": "Unauthorized",
+			})
+		}
+
+		// Extract the token from the header
+		jwtToken := strings.TrimPrefix(authHeader, "Bearer ")
+
+		// Now, 'jwtToken' contains the JWT token
+		c.Locals("jwtToken", jwtToken)
+
+		// Continue to the next middleware or route handler
 		return c.Next()
 	}
+
 }

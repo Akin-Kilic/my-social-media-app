@@ -6,5 +6,6 @@ const (
 	RedisWithGroupID     = "key-%s-get-user_id:%d-group_id:%d"
 	RedisWithKeyAndCount = "key-%s-get-user_id:%d-page:%d-count:%d"
 	RedisWithPaginate    = "key-%s-get-user_id:%d-paginate:%s"
-	RedisForJwt          = "token-%s-user_id:%s"
+	RedisForJwt          = "token:%s-user_id:%s"
+	RedisWithPost        = "user_id:%s-post_id:%s"
 )

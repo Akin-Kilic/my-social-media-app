@@ -2,21 +2,26 @@ package user
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
-	"fmt"
+	"log"
+	"os"
 	"social-media-app/pkg/config"
 	"social-media-app/pkg/constant"
 	"social-media-app/pkg/dtos"
 	"social-media-app/pkg/model"
-	"social-media-app/pkg/redis"
 	"social-media-app/pkg/utils"
-	"time"
+
+	"github.com/google/uuid"
 )
 
 type Service interface {
 	Register(ctx context.Context, user *model.User) error
-	Login(ctx context.Context, req dtos.LoginReq) (dtos.LoginDTO, error)
-	//Logout(ctx context.Context, user *model.User) error
+	Login(ctx context.Context, req *dtos.LoginReq) (dtos.LoginDTO, error)
+	Logout(ctx context.Context, key string) error
+	UpdateProfilePhoto(ctx context.Context, path string, imageType string, userId, entityId uuid.UUID) error
+	SaveImage(path string, imageType string, userId, entityId uuid.UUID) error
+	GetProfilePhoto(ctx context.Context, userId uuid.UUID) (*model.Image, error)
 }
 
 type service struct {
@@ -38,6 +43,7 @@ func (s *service) Register(ctx context.Context, user *model.User) error {
 	if err != nil {
 		return errors.New(constant.PassHashFailed)
 	}
+	log.Println("user password: ", user.Password)
 
 	err = s.repository.Save(ctx, user)
 	if err != nil {
@@ -45,8 +51,10 @@ func (s *service) Register(ctx context.Context, user *model.User) error {
 	}
 	return nil
 }
-func (s *service) Login(ctx context.Context, req dtos.LoginReq) (dtos.LoginDTO, error) {
+
+func (s *service) Login(ctx context.Context, req *dtos.LoginReq) (dtos.LoginDTO, error) {
 	var loginDto dtos.LoginDTO
+
 	user, err := s.repository.FindUserWithIdentifiers(ctx, req.Identifier)
 	if err != nil {
 		return loginDto, errors.New(constant.FailedLogin)
@@ -55,32 +63,31 @@ func (s *service) Login(ctx context.Context, req dtos.LoginReq) (dtos.LoginDTO, 
 	isTrue := utils.PasswordControl(user.Password, req.Password)
 	if !isTrue {
 		return loginDto, errors.New(constant.FailedUserNameOrPass)
-
 	}
-	ip := ctx.Value("ip_address").(string)
-	token, err := utils.GenerateJwt(user.ID, config.ReadValue().JwtSecret, ip)
+
+	token, err := utils.GenerateJwt(user.ID, config.ReadValue().JwtSecret)
 	if err != nil {
 		return loginDto, errors.New(constant.FailedLogin)
 	}
-	//rds := redis.Client()
 
-	key := fmt.Sprintf(constant.RedisForJwt, token, user.ID)
-	redis.Set(key, token, time.Hour*time.Duration(config.ReadValue().JwtExpTime))
+	// key := fmt.Sprintf(constant.RedisForJwt, token, user.ID)
+	// redis.Set(ctx, key, token, time.Hour*time.Duration(config.ReadValue().JwtExpTime))
 
-	loginDto.Convert(&user, token)
+	loginDto = dtos.LoginDTO{
+		ID:       user.ID,
+		UserName: user.Username,
+		Token:    token,
+	}
 
 	return loginDto, nil
-
 }
 
-func (s *service) Logout(ctx context.Context, user *model.User) error {
-	
-	
+func (s *service) Logout(ctx context.Context, key string) error {
+	// err := redis.Delete(key)
+	// if err != nil {
+	// 	return errors.New(constant.FailedLogout)
+	// }
 
-	err = s.repository.Save(ctx, user)
-	if err != nil {
-		return errors.New(constant.FailedCreateUser)
-	}
 	return nil
 }
 
@@ -100,24 +107,47 @@ func (s *service) duplicateControl(ctx context.Context, username, phone, email s
 	return nil
 }
 
-// func createUser(s service) fiber.Handler {
-// 	return func(c *fiber.Ctx) error {
-// 		var (
-// 			payload dtos.UserReqDto
-// 			resp    dtos.UserRespDto
-// 		)
-// 		if err := c.BodyParser(&payload); err != nil {
-// 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request payload" + err.Error()})
-// 		}
-// 		errs := utils.ValidateStruct(&payload)
-// 		if errs != nil {
-// 			return c.Status(400).JSON(utils.Response(errs))
-// 		}
-// 		err := s.CreateUser(&payload, &resp)
-// 		if err != nil {
-// 			return c.Status(404).JSON(utils.Response(err.Error()))
-// 		}
-// 		resp.Message = "User created successfully"
-// 		return c.Status(200).JSON(resp)
-// 	}
-// }
+func (s *service) UpdateProfilePhoto(ctx context.Context, path string, imageType string, userId, entityId uuid.UUID) error {
+	imageBytes, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+
+	base64Image := base64.StdEncoding.EncodeToString(imageBytes)
+	image := &model.Image{
+		Data:      base64Image,
+		UserId:    userId,
+		EnityId:   entityId,
+		ImageType: imageType,
+	}
+	err = s.repository.UpdateProfilePhoto(ctx, image)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *service) SaveImage(path string, imageType string, userId, entityId uuid.UUID) error {
+	imageBytes, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+
+	base64Image := base64.StdEncoding.EncodeToString(imageBytes)
+	image := &model.Image{
+		Data:      base64Image,
+		UserId:    userId,
+		EnityId:   entityId,
+		ImageType: imageType,
+	}
+
+	return s.repository.SaveImage(image)
+}
+
+func (s *service) GetProfilePhoto(ctx context.Context, userId uuid.UUID) (*model.Image, error) {
+	image, err := s.repository.GetProfilePhoto(ctx, userId)
+	if err != nil {
+		return image, err
+	}
+	return image, nil
+}

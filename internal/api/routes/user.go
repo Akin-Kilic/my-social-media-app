@@ -2,66 +2,170 @@ package routes
 
 import (
 	"context"
-	"social-media-app/pkg/config"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"log"
+	"net/http"
+	"social-media-app/pkg/constant"
 	"social-media-app/pkg/domains/user"
 	"social-media-app/pkg/dtos"
 	"social-media-app/pkg/model"
 	"social-media-app/pkg/utils"
+	"time"
 
-	jwtware "github.com/gofiber/contrib/jwt"
+	"github.com/gofiber/adaptor/v2"
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func UserRoutes(app *fiber.App, service user.Service) {
-	app.Post("/register", Register(service))
-	app.Post("/login", Login(service))
+	user := app.Group("/user")
+	user.Post("/register", Register(service))
+	user.Post("/login", Login(service))
 
-	app.Use(jwtware.New(jwtware.Config{
-		SigningKey: jwtware.SigningKey{Key: []byte(config.ReadValue().JwtSecret)},
-	}))
-	
-
+	// app.Use(jwtware.New(jwtware.Config{
+	// 	SigningKey: jwtware.SigningKey{Key: []byte(config.ReadValue().JwtSecret)},
+	// }))
+	// app.Use(middlewares.SetToken())
+	user.Post("/logout", Logout(service))
+	user.Post("/image", UploadImage(service))
+	user.Get("/profile", GetProfilePhoto(service))
 }
 
 func Register(s user.Service) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		var user *model.User
+		var user model.User
 		if err := c.BodyParser(&user); err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request payload" + err.Error()})
+			log.Println("Error parsing request body:", err)
+			return c.Status(400).JSON(fiber.Map{"error": "Invalid JSON format"})
 		}
-		// if v.HasErrors() {
-		// 	c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Validation error", "errors": v.FieldErrors})
-		// 	return
-		// }
+
 		ctx := context.Background()
-		err := s.Register(ctx, user)
-		if err != nil {
-			return c.Status(404).JSON(utils.Response(err.Error()))
+		if err := s.Register(ctx, &user); err != nil {
+			log.Println("Error registering user:", err)
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to register user"})
 		}
-		return c.Status(201).JSON(utils.Response(user))
+
+		return c.Status(201).JSON(fiber.Map{"message": "User registered successfully"})
 	}
 }
 
 func Login(s user.Service) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		var (
-			req dtos.LoginReq
-		)
-		if err := c.BodyParser(&req); err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request payload" + err.Error()})
+		var user dtos.LoginReq
+		if err := c.BodyParser(&user); err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "Invalid JSON format"})
 		}
-		// if v.HasErrors() {
-		// 	c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Validation error", "errors": v.FieldErrors})
-		// 	return
-		// }
+
+		loginDto, err := s.Login(c.Context(), &user)
+
+		if err != nil {
+			log.Println("Error during login:", err)
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to log in user"})
+		}
+
+		c.Cookie(&fiber.Cookie{
+			Name:     "Authorization",
+			Value:    loginDto.Token,
+			Expires:  time.Now().Add(time.Minute * 5),
+			SameSite: "Lax",
+			HTTPOnly: true,
+		})
+
+		return c.Status(200).JSON(fiber.Map{
+			"token": loginDto.Token,
+		})
+	}
+}
+
+func Logout(s user.Service) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		var err error
+		// token := c.Locals("jwtToken").(string)
+		token := c.Cookies("Authorization")
+
+		jc, err := utils.ParseToken(token)
+		if err != nil {
+			return errors.New("parse token errror")
+		}
+
+		key := fmt.Sprintf(constant.RedisForJwt, token, jc.UserId)
 
 		ctx := context.Background()
-		ipCtx := context.WithValue(ctx, "ip_address", c.IP())
-
-		loginRes, err := s.Login(ipCtx, req)
+		err = s.Logout(ctx, key)
 		if err != nil {
-			return c.Status(404).JSON(utils.Response(err.Error()))
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to register user"})
 		}
-		return c.Status(201).JSON(utils.Response(loginRes))
+
+		c.Cookie(&fiber.Cookie{
+			Name:     "Authorization",
+			Value:    "",
+			SameSite: "Lax",
+			Expires:  time.Now().Add(-time.Hour),
+			HTTPOnly: true,
+		})
+
+		return c.Status(201).JSON(fiber.Map{
+			"message": "User logout successfully",
+		})
 	}
+}
+
+func UploadImage(s user.Service) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		token := c.Cookies("Authorization")
+
+		jc, err := utils.ParseToken(token)
+		if err != nil {
+			return errors.New("parse token error: ")
+		}
+		file, err := c.FormFile("image")
+		if err != nil {
+			return err
+		}
+		path := "./images/" + file.Filename
+		if err := c.SaveFile(file, path); err != nil {
+			return err
+		}
+		imageType := c.FormValue("image_type")
+		userId := jc.UserId
+		entityId := c.FormValue("entityId")
+
+		entityUuid, err := uuid.Parse(entityId)
+		if err != nil {
+			return err
+		}
+		if err := s.SaveImage(path, imageType, userId, entityUuid); err != nil {
+			return err
+		}
+		return c.SendStatus(http.StatusOK)
+	}
+}
+
+func GetProfilePhoto(s user.Service) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		token := c.Cookies("Authorization")
+		jc, err := utils.ParseToken(token)
+		if err != nil {
+			return errors.New("parse token error")
+		}
+		image, err := s.GetProfilePhoto(context.Background(), jc.UserId)
+		if err != nil {
+			return c.Status(404).JSON(fiber.Map{"error": err.Error()})
+		}
+		byteImage, err := json.Marshal(image)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		}
+		return c.Status(200).JSON(fiber.Map{
+			"message": "Profile photo get successfully",
+			"data":    byteImage,
+		})
+	}
+}
+
+func RegisterPrometheusRoute(a *fiber.App) {
+	a.Get("/metrics", adaptor.HTTPHandler(promhttp.Handler()))
 }

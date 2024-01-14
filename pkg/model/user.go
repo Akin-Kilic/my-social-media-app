@@ -1,15 +1,16 @@
 package model
 
-import "social-media-app/pkg/utils"
+import (
+	"social-media-app/pkg/utils"
+)
 
 type User struct {
 	Base
-	Username       string `gorm:"uniqueIndex;not null" json:"username"`
-	Phone          string `gorm:"uniqueIndex;not null" json:"phone"`
-	Email          string `gorm:"uniqueIndex;not null" json:"email"`
-	Password       string `gorm:"not null" json:"password"`
-	FullName       string `json:"full_name"`
-	ProfilePicture string `json:"profile_picture"`
+	Username string `gorm:"uniqueIndex;not null" json:"username"`
+	Phone    string `gorm:"uniqueIndex;not null" json:"phone"`
+	Email    string `gorm:"uniqueIndex;not null" json:"email"`
+	Password string `gorm:"not null" json:"password"`
+	FullName string `json:"full_name"`
 }
 
 func (u *User) PassHash() error {

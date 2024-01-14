@@ -8,13 +8,13 @@ import (
 )
 
 type Config struct {
-	Port       string   `yaml:"port"`
-	Database   Database `yaml:"database"`
-	JwtSecret  string   `yaml:"jwt_secret"`
-	Redis      Redis    `yaml:"redis"`
-	JwtExpTime int      `yaml:"jwt_expire_time"`
-
-	// Nats     Nats     `yaml:"nats"`
+	Port       string     `yaml:"port"`
+	Database   Database   `yaml:"database"`
+	JwtSecret  string     `yaml:"jwt_secret"`
+	Redis      Redis      `yaml:"redis"`
+	JwtExpTime int        `yaml:"jwt_expire_time"`
+	Prothomeus Prometheus `yaml:"prothomeus"`
+	Grafana    Grafana    `yaml:"grafana"`
 }
 
 type Database struct {
@@ -32,6 +32,14 @@ type Redis struct {
 	Port     string `yaml:"port"`
 	Password string `yaml:"password"`
 	DB       int    `yaml:"db"`
+}
+
+type Prometheus struct {
+	Port string `yaml:"port"`
+}
+type Grafana struct {
+	Port                string `yaml:"port"`
+	GfSecurityAdminPass string `yaml:"gf_security_admin_pass"`
 }
 
 // type Nats struct {

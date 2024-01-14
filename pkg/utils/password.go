@@ -4,10 +4,7 @@ import "golang.org/x/crypto/bcrypt"
 
 func PasswordControl(hash, pass string) bool {
 	passwordControl := bcrypt.CompareHashAndPassword([]byte(hash), []byte(pass))
-	if passwordControl != nil {
-		return false
-	}
-	return true
+	return passwordControl == nil
 }
 
 func HashPassword(password string) (string, error) {

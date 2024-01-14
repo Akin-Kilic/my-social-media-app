@@ -14,6 +14,31 @@ services:
       - POSTGRES_PASSWORD=netadim
       - POSTGRES_DB=netadim
 
+
+  # netadim-prometheus:
+  #   image: prom/prometheus
+  #   ports:
+  #     - "9091:9090"
+  #   volumes:
+  #     - ./prometheus:/etc/prometheus
+  #   command:
+  #     - '--config.file=/etc/prometheus/prometheus.yml'
+  #   networks:
+  #     - netadim
+
+  # netadim-grafana:
+  #   image: grafana/grafana
+  #   ports:
+  #     - "3001:3000"
+  #   environment:
+  #     - GF_SECURITY_ADMIN_PASSWORD=admin  # Grafana admin şifresi
+  #   depends_on:
+  #     - netadim-prometheus
+  #   networks:
+  #     - netadim
+
+
+
   # netadim-nats:
   #   image: nats:latest
   #   command: --js
@@ -34,37 +59,36 @@ services:
     volumes:
       - redis_data:/data
     environment:
-    - ALLOW_EMPTY_PASSWORD=yes 
+    - ALLOW_EMPTY_PASSWORD=yes
     networks:
       - netadim
 
-  minio:
-    image: quay.io/minio/minio
-    container_name: minio
-    environment:
-      MINIO_ROOT_USER: netadim
-      MINIO_ROOT_PASSWORD: netadimdevsecret
-    command: server /data --console-address ":9001"
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    restart: always
-    volumes:
-      - minio_data:/data
-    networks:
-      - netadim
+  # minio:
+  #   image: quay.io/minio/minio
+  #   container_name: minio
+  #   environment:
+  #     MINIO_ROOT_USER: netadim
+  #     MINIO_ROOT_PASSWORD: netadimdevsecret
+  #   command: server /data --console-address ":9001"
+  #   ports:
+  #     - "9000:9000"
+  #     - "9001:9001"
+  #   restart: always
+  #   volumes:
+  #     - minio_data:/data
+  #   networks:
+  #     - netadim
 
-  meili:
-    image: getmeili/meilisearch:latest
-    volumes:
-      - ./data.ms:/data.ms
-    ports:
-      - "7700:7700"
-    environment:
-      - MEILI_MASTER_KEY=r6EZqIi6HbNxGeOGm0kztMJlUG9TnRaG
-    networks:
-      - netadim  
- 
+  # meili:
+  #   image: getmeili/meilisearch:latest
+  #   volumes:
+  #     - ./data.ms:/data.ms
+  #   ports:
+  #     - "7700:7700"
+  #   environment:
+  #     - MEILI_MASTER_KEY=r6EZqIi6HbNxGeOGm0kztMJlUG9TnRaG
+  #   networks:
+  #     - netadim
 
   netadim:
     build:
@@ -83,10 +107,10 @@ services:
       - netadim
     ports:
       - 3003:3003
-      - 50051:50051
+      # - 50051:50051
     depends_on:
       - netadim-db
-      - minio
+      # - minio
 
 
 networks:
@@ -99,4 +123,4 @@ volumes:
     external: false
   minio_data:
     external: false
-  redis_data:  
+  redis_data:

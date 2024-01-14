@@ -1,8 +1,6 @@
 package dtos
 
 import (
-	"social-media-app/pkg/model"
-
 	"github.com/google/uuid"
 )
 
@@ -26,15 +24,5 @@ type ChangeForgotPassReq struct {
 type LoginDTO struct {
 	ID       uuid.UUID `json:"id"`
 	UserName string    `json:"username"`
-	Phone    string    `json:"phone"`
-	IsVerify bool      `json:"is_verify"`
 	Token    string    `json:"token"`
-}
-
-func (u *LoginDTO) Convert(user *model.User, token string) {
-	u.ID = user.ID
-	u.UserName = user.Username
-	//u.IsVerify = user.IsVerify
-	u.Token = token
-	u.Phone = user.Phone
 }

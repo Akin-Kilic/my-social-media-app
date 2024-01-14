@@ -1,28 +1,24 @@
 package model
 
 import (
-	"time"
+	"social-media-app/pkg/dtos"
 
 	"github.com/google/uuid"
 )
 
 type Post struct {
 	Base
-	UserID    uint       `json:"user_id"`
-	Caption   string     `json:"caption"`
-	ShortLink string     `gorm:"uniqueIndex;not null" json:"short_link"`
-	ExpiresAt *time.Time `json:"expires_at"`
+	UserID    uuid.UUID `json:"user_id"`
+	Caption   string    `json:"caption"`
+	ShortLink string    `gorm:"uniqueIndex;not null" json:"short_link"`
 }
 
-type Likes struct {
-	Base
-	EntityId   uuid.UUID `json:"entity_id"`
-	LikeUserId uuid.UUID `json:"like_user_id"`
-	LikeType   int       `json:"like_type"` // 1: Post, 2: Comment
+func (p *Post) Mapper(req *dtos.AddPostDTO) {
+	p.Caption = req.Caption
+	// p.ShortLink = req.ShortLink
 }
 
-type UserPost struct {
-	Base
-	UserId uuid.UUID `json:"user_id"`
-	PostId uuid.UUID `json:"post_id"`
+func (p *Post) MapperForUpdate(req *dtos.UpdatePostDTO) {
+	p.Caption = req.Caption
+	// p.ShortLink = req.ShortLink
 }
