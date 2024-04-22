@@ -38,7 +38,7 @@ func (r *repository) Save(ctx context.Context, user *model.User) error {
 
 func (r *repository) GetUserWithId(ctx context.Context, userId uuid.UUID) (model.User, error) {
 	var user model.User
-	err := r.db.WithContext(ctx).Table("users").Where("id = ?", userId).First(&user).Error
+	err := r.db.Table("users").Where("id = ?", userId).First(&user).Error
 	return user, err
 }
 

@@ -15,33 +15,7 @@ import (
 	"social-media-app/pkg/redis"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/prometheus/client_golang/prometheus"
 )
-
-var (
-	PrometheusUserRegistrationTotal = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "social_media_app_user_registration_total",
-			Help: "Total number of user registrations",
-		},
-		[]string{},
-	)
-
-	PrometheusUserLoginTotal = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "social_media_app_user_login_total",
-			Help: "Total number of user logins",
-		},
-		[]string{},
-	)
-)
-
-func init() {
-	prometheus.MustRegister(
-		PrometheusUserRegistrationTotal,
-		PrometheusUserLoginTotal,
-	)
-}
 
 func main() {
 	conf := config.ReadValue()
@@ -60,8 +34,8 @@ func main() {
 	userRepo := user.NewRepository(db)
 	userService := user.NewUser(userRepo)
 
-	repo := post.NewRepository(db)
-	postService := post.NewPost(repo)
+	poatRepo := post.NewRepository(db)
+	postService := post.NewPost(poatRepo)
 
 	likeRepo := like.NewRepository(db)
 	likeService := like.NewLike(likeRepo)

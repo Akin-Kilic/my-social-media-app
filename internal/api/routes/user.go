@@ -14,21 +14,14 @@ import (
 	"social-media-app/pkg/utils"
 	"time"
 
-	"github.com/gofiber/adaptor/v2"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func UserRoutes(app *fiber.App, service user.Service) {
 	user := app.Group("/user")
 	user.Post("/register", Register(service))
 	user.Post("/login", Login(service))
-
-	// app.Use(jwtware.New(jwtware.Config{
-	// 	SigningKey: jwtware.SigningKey{Key: []byte(config.ReadValue().JwtSecret)},
-	// }))
-	// app.Use(middlewares.SetToken())
 	user.Post("/logout", Logout(service))
 	user.Post("/image", UploadImage(service))
 	user.Get("/profile", GetProfilePhoto(service))
@@ -42,8 +35,7 @@ func Register(s user.Service) fiber.Handler {
 			return c.Status(400).JSON(fiber.Map{"error": "Invalid JSON format"})
 		}
 
-		ctx := context.Background()
-		if err := s.Register(ctx, &user); err != nil {
+		if err := s.Register(c.Context(), &user); err != nil {
 			log.Println("Error registering user:", err)
 			return c.Status(500).JSON(fiber.Map{"error": "Failed to register user"})
 		}
@@ -83,7 +75,6 @@ func Login(s user.Service) fiber.Handler {
 func Logout(s user.Service) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		var err error
-		// token := c.Locals("jwtToken").(string)
 		token := c.Cookies("Authorization")
 
 		jc, err := utils.ParseToken(token)
@@ -151,7 +142,7 @@ func GetProfilePhoto(s user.Service) fiber.Handler {
 		if err != nil {
 			return errors.New("parse token error")
 		}
-		image, err := s.GetProfilePhoto(context.Background(), jc.UserId)
+		image, err := s.GetProfilePhoto(c.Context(), jc.UserId)
 		if err != nil {
 			return c.Status(404).JSON(fiber.Map{"error": err.Error()})
 		}
@@ -166,6 +157,6 @@ func GetProfilePhoto(s user.Service) fiber.Handler {
 	}
 }
 
-func RegisterPrometheusRoute(a *fiber.App) {
-	a.Get("/metrics", adaptor.HTTPHandler(promhttp.Handler()))
-}
+// func RegisterPrometheusRoute(a *fiber.App) {
+// 	a.Get("/metrics", adaptor.HTTPHandler(promhttp.Handler()))
+// }

@@ -13,9 +13,6 @@ import (
 )
 
 func FriendRoutes(app *fiber.App, service friends.Service) {
-	// app.Use(jwtware.New(jwtware.Config{
-	// 	SigningKey: jwtware.SigningKey{Key: []byte(config.ReadValue().JwtSecret)},
-	// }))
 	friend := app.Group("/friend")
 	friend.Post("friend", AddFriend(service))
 	friend.Get("friends", GetFriends(service))
