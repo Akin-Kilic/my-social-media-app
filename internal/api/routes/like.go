@@ -13,9 +13,6 @@ import (
 )
 
 func LikeRoutes(app *fiber.App, service like.Service) {
-	// app.Use(jwtware.New(jwtware.Config{
-	// 	SigningKey: jwtware.SigningKey{Key: []byte(config.ReadValue().JwtSecret)},
-	// }))
 	like := app.Group("/like")
 
 	like.Post("/like", Create(service))

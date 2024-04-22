@@ -21,7 +21,6 @@ type Repository interface {
 	GetPostWithPostId(ctx context.Context, userId, postId uuid.UUID) ([]*model.Post, error)
 	GetPostWithShortLink(ctx context.Context, shortLink string) (*model.Post, error)
 }
-
 type repository struct {
 	db *gorm.DB
 }

@@ -10,7 +10,6 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o netadim main.go
 
 FROM scratch
 
-# take env from build args
 ARG VERSION
 ENV APP_VERSION=$VERSION
 

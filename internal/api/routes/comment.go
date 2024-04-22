@@ -14,9 +14,6 @@ import (
 )
 
 func CommentRoutes(app *fiber.App, service comment.Service) {
-	// app.Use(jwtware.New(jwtware.Config{
-	// 	SigningKey: jwtware.SigningKey{Key: []byte(config.ReadValue().JwtSecret)},
-	// }))
 	comment := app.Group("/comment")
 	comment.Post("comment", AddComment(service))
 	comment.Get("comments", GetCommentsForPost(service))

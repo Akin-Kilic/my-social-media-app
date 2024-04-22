@@ -15,9 +15,6 @@ import (
 func PostRoutes(app *fiber.App, service post.Service) {
 
 	app.Get("/post/sh/:shortLink", GetWithShortLink(service))
-	// app.Use(jwtware.New(jwtware.Config{
-	// 	SigningKey: jwtware.SigningKey{Key: []byte(config.ReadValue().JwtSecret)},
-	// }))
 	post := app.Group("/post")
 
 	post.Get("/userposts", GetUserAllPosts(service))
